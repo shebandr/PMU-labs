@@ -33,6 +33,7 @@ fun Window(viewModel: NewsViewModel) {
             viewModel.changeNews()
             firstRender = false
         }
+        val coroutineScope = rememberCoroutineScope()
         LaunchedEffect(Unit) {
             while (true) {
                 delay(5000)
@@ -47,7 +48,7 @@ fun Window(viewModel: NewsViewModel) {
                     Box(modifier = Modifier.border(5.dp, color = Color.Black)){
                         Column(modifier = Modifier
                             .width(180.dp)
-                            .background(color = Color.DarkGray)
+                            .background(color = Color.Gray)
                             .padding(all = 5.dp)){
 
                             Text(text = viewModel.newsString1, modifier = Modifier.height(240.dp))
@@ -64,7 +65,7 @@ fun Window(viewModel: NewsViewModel) {
                     Box(modifier = Modifier.border(5.dp, color = Color.Black)){
                         Column(modifier = Modifier
                             .width(180.dp)
-                            .background(color = Color.DarkGray)
+                            .background(color = Color.Gray)
                             .padding(all = 5.dp)){
 
                             Text(text = viewModel.newsString2, modifier = Modifier.height(240.dp))
@@ -82,7 +83,7 @@ fun Window(viewModel: NewsViewModel) {
                     Box(modifier = Modifier.border(5.dp, color = Color.Black)){
                         Column(modifier = Modifier
                             .width(180.dp)
-                            .background(color = Color.DarkGray)
+                            .background(color = Color.Gray)
                             .padding(all = 5.dp)){
 
                             Text(text = viewModel.newsString3, modifier = Modifier.height(240.dp))
@@ -99,7 +100,7 @@ fun Window(viewModel: NewsViewModel) {
                     Box(modifier = Modifier.border(5.dp, color = Color.Black)){
                         Column(modifier = Modifier
                             .width(180.dp)
-                            .background(color = Color.DarkGray)
+                            .background(color = Color.Gray)
                             .padding(all = 5.dp)){
 
                             Text(text = viewModel.newsString4, modifier = Modifier.height(240.dp))
