@@ -13,7 +13,7 @@ class Renderer(var context: Context) : GLSurfaceView.Renderer {
     private var mAngle = 0f
 
     init {
-        mSquare = Square()
+        mSquare = Square(this.context)
         mCube = Cube()
     }
 
@@ -43,12 +43,11 @@ class Renderer(var context: Context) : GLSurfaceView.Renderer {
         gl.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
         gl.glLoadIdentity()
         gl.glTranslatef(0.0f, 0.0f, -5.0f)
-        //gl.glRotatef(mAngle, 1f, 1f, 1f)
         mSquare.draw(gl)
         gl.glLoadIdentity()
         gl.glTranslatef(0.0f, 0.0f, -4.0f)
-        gl.glScalef(0.4f, 0.4f, 0.4f)
-        gl.glRotatef(angleCube, -1.0f, 1.0f, -1.0f)
+        gl.glScalef(0.2f, 0.2f, 0.2f)
+        gl.glRotatef(angleCube, 1.0f, -1.0f, 1.0f)
         mCube.draw(gl)
         gl.glLoadIdentity()
         gl.glTranslatef(

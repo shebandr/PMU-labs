@@ -1,24 +1,22 @@
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.opengl.GLES20
-import android.opengl.GLES20.glDeleteTextures
-import android.opengl.GLES20.glGenTextures
 import android.opengl.GLUtils
+import com.andreyeyeye.pmu.R
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import javax.microedition.khronos.opengles.GL10
 
 class Square(private val context: Context) {
     private val vertexBuffer: FloatBuffer
     private val textureBuffer: FloatBuffer
-    private var program: Int = 0
     private var textureId: Int = 0
 
     private val vertices = floatArrayOf(
-        -1.0f, -1.0f, 0.0f,  // 0. left-bottom
-        1.0f, -1.0f, 0.0f,   // 1. right-bottom
-        -1.0f, 1.0f, 0.0f,   // 2. left-top
-        1.0f, 1.0f, 0.0f     // 3. right-top
+        -3.0f, -3.0f, 0.0f,  // 0. left-bottom
+        3.0f, -3.0f, 0.0f,   // 1. right-bottom
+        -3.0f, 3.0f, 0.0f,   // 2. left-top
+        3.0f, 3.0f, 0.0f     // 3. right-top
     )
 
     private val textureCoords = floatArrayOf(
@@ -29,35 +27,6 @@ class Square(private val context: Context) {
     )
 
     init {
-        // Создание вершинного и фрагментного шейдера
-        val vertexShaderCode = """
-            attribute vec4 vPosition;
-            attribute vec2 aTexCoord;
-            varying vec2 vTexCoord;
-            void main() {
-                gl_Position = vPosition;
-                vTexCoord = aTexCoord;
-            }
-        """.trimIndent()
-
-        val fragmentShaderCode = """
-            precision mediump float;
-            uniform sampler2D uTexture;
-            varying vec2 vTexCoord;
-            void main() {
-                gl_FragColor = texture2D(uTexture, vTexCoord);
-            }
-        """.trimIndent()
-
-        val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
-        val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
-
-        program = GLES20.glCreateProgram().also {
-            GLES20.glAttachShader(it, vertexShader)
-            GLES20.glAttachShader(it, fragmentShader)
-            GLES20.glLinkProgram(it)
-        }
-
         // Vertex buffer
         val byteBuf = ByteBuffer.allocateDirect(vertices.size * 4)
         byteBuf.order(ByteOrder.nativeOrder())
@@ -71,62 +40,60 @@ class Square(private val context: Context) {
         textureBuffer = textureByteBuf.asFloatBuffer()
         textureBuffer.put(textureCoords)
         textureBuffer.position(0)
-
-        // Load texture
-        textureId = loadTexture()
     }
 
-    private fun loadShader(type: Int, shaderCode: String): Int {
-        return GLES20.glCreateShader(type).also { shader ->
-            GLES20.glShaderSource(shader, shaderCode)
-            GLES20.glCompileShader(shader)
-        }
-    }
-
-    private fun loadTexture(): Int {
+    fun loadTexture(gl: GL10): Int {
         val textureHandle = IntArray(1)
-        GLES20.glGenTextures(1, textureHandle, 0)
+        gl.glGenTextures(1, textureHandle, 0)
 
         if (textureHandle[0] != 0) {
+            // Загрузка изображения в битмап с ресурса
             val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.stars)
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0])
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+            gl.glBindTexture(GL10.GL_TEXTURE_2D, textureHandle[0])
+
+            // Загружаем текстуру в OpenGL
+            GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
+
+            // Настройка параметров текстуры
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_NEAREST.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE.toFloat())
+
+            // Освобождаем ресурсы битмапа
             bitmap.recycle()
         }
 
         return textureHandle[0]
     }
 
-    fun draw() {
-        GLES20.glUseProgram(program)
+    fun draw(gl: GL10) {
+        if (textureId == 0) {
+            textureId = loadTexture(gl)
+        }
 
-        // Bind the texture
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+        // Отключаем смешивание цветов
+        gl.glDisable(GL10.GL_BLEND)
 
-        val textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
-        GLES20.glUniform1i(textureHandle, 0)
+        gl.glEnable(GL10.GL_TEXTURE_2D)
+        gl.glBindTexture(GL10.GL_TEXTURE_2D, textureId)
 
-        // Set vertex and texture coordinate pointers
-        val positionHandle = GLES20.glGetAttribLocation(program, "vPosition")
-        GLES20.glEnableVertexAttribArray(positionHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 0, vertexBuffer)
+        gl.glEnableClientState(GL10.GL_VERTEX_ARRAY)
+        gl.glEnableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
 
-        val texCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
-        GLES20.glEnableVertexAttribArray(texCoordHandle)
-        GLES20.glVertexAttribPointer(texCoordHandle, 2, GLES20.GL_FLOAT, false, 0, textureBuffer)
+        gl.glVertexPointer(3, GL10.GL_FLOAT, 0, vertexBuffer)
+        gl.glTexCoordPointer(2, GL10.GL_FLOAT, 0, textureBuffer)
 
-        // Draw the square
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertices.size / 3)
+        gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP, 0, vertices.size / 3)
 
-        // Disable vertex array
-        GLES20.glDisableVertexAttribArray(positionHandle)
-        GLES20.glDisableVertexAttribArray(texCoordHandle)
+        gl.glDisableClientState(GL10.GL_VERTEX_ARRAY)
+        gl.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
+        gl.glDisable(GL10.GL_TEXTURE_2D)
     }
-
-    fun delete() {
-        glDeleteTextures(1, intArrayOf(textureId), 0)
+    fun delete(gl: GL10) {
+        if (textureId != 0) {
+            gl.glDeleteTextures(1, intArrayOf(textureId), 0)
+            textureId = 0
+        }
     }
 }
