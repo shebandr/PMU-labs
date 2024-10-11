@@ -1,110 +1,174 @@
-import android.content.Context
-import android.opengl.GLES10
-import android.opengl.GLSurfaceView
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.cos
-import kotlin.math.sin
+import android.opengl.GLSurfaceView
+import android.opengl.GLUtils
+import android.opengl.GLU
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.opengl.GLES10
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
+import java.nio.ShortBuffer
+import com.andreyeyeye.pmu.R
 
 class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
-    private val sunRadius = 0.2f
-    private val planetRadius = 0.05f
-    private val moonRadius = 0.02f
+    private val textures = IntArray(5)
+    private val planetTextures = intArrayOf(
+        R.drawable.sun,   // Солнце
+        R.drawable.earth, // Земля
+        R.drawable.moon,  // Луна
+        R.drawable.mars,  // Марс
+        R.drawable.jupiter // Юпитер
+    )
 
-    private var angle = 0f
+    private val planetRadii = floatArrayOf(1.0f, 0.5f, 0.2f, 0.4f, 0.8f)
+    private val planetOrbitRadii = floatArrayOf(0.0f, 2.0f, 2.5f, 4.0f, 6.0f)
+    private val planetOrbitSpeeds = floatArrayOf(0.0f, 1.0f, 1.2f, 0.8f, 0.6f)
+    private val planetRotationSpeeds = floatArrayOf(0.0f, 2.0f, 3.0f, 1.5f, 1.0f)
+
+    private var angle = 0.0f
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-        GLES10.glClearColor(0f, 0f, 0f, 1f)
-        GLES10.glEnable(GL10.GL_DEPTH_TEST)
-        GLES10.glEnable(GL10.GL_CULL_FACE) // Включаем отсечение невидимых граней
+        gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        gl.glEnable(GL10.GL_TEXTURE_2D)
+        gl.glEnable(GL10.GL_CULL_FACE)
+        gl.glEnable(GL10.GL_DEPTH_TEST)
+
+        loadTextures(gl)
+    }
+
+    override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
+        gl.glViewport(0, 0, width, height)
+        gl.glMatrixMode(GL10.GL_PROJECTION)
+        gl.glLoadIdentity()
+        GLU.gluPerspective(gl, 45.0f, width.toFloat() / height.toFloat(), 0.1f, 100.0f)
+        gl.glMatrixMode(GL10.GL_MODELVIEW)
+        gl.glLoadIdentity()
     }
 
     override fun onDrawFrame(gl: GL10) {
-        // Очистка цвета и глубины
-        GLES10.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
-
-        // Установка матрицы модели
+        gl.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
         gl.glLoadIdentity()
 
-        // Рисуем Солнце
-        drawSun(gl)
+        // Устанавливаем камеру с низшего угла
+        GLU.gluLookAt(gl, 0.0f, -5.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f)
 
-        // Обновление угла вращения
+        // Отрисовка Солнца
+        drawPlanet(gl, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
+
+        // Отрисовка планет
+        for (i in 1 until planetTextures.size) {
+            if(i!=2){
+                val orbitAngle = angle * planetOrbitSpeeds[i]
+                val orbitRadius = planetOrbitRadii[i]
+                val x = orbitRadius * Math.cos(Math.toRadians(orbitAngle.toDouble())).toFloat()
+                val y = orbitRadius * Math.sin(Math.toRadians(orbitAngle.toDouble())).toFloat()
+
+                val rotationAngle = angle * planetRotationSpeeds[i]
+                drawPlanet(gl, i, x, y, 0.0f, orbitAngle, rotationAngle)
+
+                // Отрисовка Луны (только для Земли)
+                if (i == 1) {
+                    val moonAngle = angle * 2.0f
+                    val moonX = x + 0.8f * Math.cos(Math.toRadians(moonAngle.toDouble())).toFloat()
+                    val moonY = y + 0.8f * Math.sin(Math.toRadians(moonAngle.toDouble())).toFloat()
+                    val moonZ = 0.5f * Math.sin(Math.toRadians(moonAngle.toDouble())).toFloat()
+
+                    drawPlanet(gl, 2, moonX, moonY, moonZ, moonAngle, moonAngle)
+                }
+            }
+
+        }
+
         angle += 1.0f
-
-        // Рисуем планеты
-        drawPlanet(gl, angle, 0.5f) // Пример для первой планеты (например, Меркурий)
-        drawPlanet(gl, angle * 0.8f, 0.7f) // Пример для второй планеты (например, Венера)
-        drawPlanet(gl, angle, 0.9f) // Пример для третьей планеты (например, Земля)
-
-        // Рисуем Луну
-        drawMoon(gl, angle, 0.9f) // Лунам вращается вокруг Земли
     }
 
-    private fun drawSun(gl: GL10) {
-        gl.glColor4f(1f, 1f, 0f, 1f) // Цвет Солнца (желтый)
+    private fun drawPlanet(gl: GL10, planetIndex: Int, x: Float, y: Float, z: Float, orbitAngle: Float, rotationAngle: Float) {
         gl.glPushMatrix()
-        gl.glTranslatef(0f, 0f, -1f) // Позиция Солнца
-        drawSphere(gl, sunRadius, 30, 30) // Рисуем Солнце
+        gl.glTranslatef(x, y, z)
+        gl.glRotatef(rotationAngle, 0.0f, 0.0f, 1.0f) // Вращение вокруг оси Z
+        gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[planetIndex])
+        drawSphere(gl, planetRadii[planetIndex], 100, 100) // Увеличиваем количество сегментов и слоев
         gl.glPopMatrix()
     }
 
-    private fun drawPlanet(gl: GL10, angle: Float, distance: Float) {
-        // Позиционируем планету
-        val x = distance * cos(Math.toRadians(angle.toDouble())).toFloat()
-        val y = distance * sin(Math.toRadians(angle.toDouble())).toFloat()
+    private fun drawSphere(gl: GL10, radius: Float, numSlices: Int, numStacks: Int) {
+        val vertices = FloatArray(numSlices * numStacks * 3)
+        val texCoords = FloatArray(numSlices * numStacks * 2)
+        val indices = ShortArray(numSlices * numStacks * 6)
 
-        gl.glPushMatrix()
-        gl.glTranslatef(x, y, -1f) // Позиция планеты
-        gl.glColor4f(0f, 0f, 1f, 1f) // Цвет планеты (синий для примера)
-        drawSphere(gl, planetRadius, 20, 20) // Рисуем планету
-        gl.glPopMatrix()
-    }
+        var vertexIndex = 0
+        var texCoordIndex = 0
+        var indexIndex = 0
 
-    private fun drawMoon(gl: GL10, angle: Float, planetDistance: Float) {
-        // Позиционируем Луну относительно Земли
-        val moonDistance = 0.1f // Расстояние Луны от Земли
-        val x = planetDistance * cos(Math.toRadians(angle.toDouble())).toFloat() + moonDistance * cos(Math.toRadians(angle * 2.0)).toFloat()
-        val y = planetDistance * sin(Math.toRadians(angle.toDouble())).toFloat() + moonDistance * sin(Math.toRadians(angle * 2.0)).toFloat()
+        for (stack in 0 until numStacks) {
+            val phi = Math.PI * stack.toDouble() / (numStacks - 1)
+            for (slice in 0 until numSlices) {
+                val theta = 2.0 * Math.PI * slice.toDouble() / numSlices.toDouble()
 
-        gl.glPushMatrix()
-        gl.glTranslatef(x, y, -1f) // Позиция Луны
-        gl.glColor4f(0.5f, 0.5f, 0.5f, 1f) // Цвет Луны (серый)
-        drawSphere(gl, moonRadius, 20, 20) // Рисуем Луну
-        gl.glPopMatrix()
-    }
+                val x = radius * Math.sin(phi) * Math.cos(theta)
+                val y = radius * Math.sin(phi) * Math.sin(theta)
+                val z = radius * Math.cos(phi)
 
-    private fun drawSphere(gl: GL10, radius: Float, latitudeBands: Int, longitudeBands: Int) {
-        for (latNumber in 0 until latitudeBands) {
-            val theta = latNumber * Math.PI / latitudeBands
-            val sinTheta = sin(theta).toFloat()
-            val cosTheta = cos(theta).toFloat()
+                vertices[vertexIndex++] = x.toFloat()
+                vertices[vertexIndex++] = y.toFloat()
+                vertices[vertexIndex++] = z.toFloat()
 
-            for (longNumber in 0 until longitudeBands) {
-                val phi = longNumber * 2.0 * Math.PI / longitudeBands
-                val sinPhi = sin(phi).toFloat()
-                val cosPhi = cos(phi).toFloat()
+                // Улучшенные текстурные координаты
+                texCoords[texCoordIndex++] = (slice.toFloat() + 0.5f) / numSlices.toFloat()
+                texCoords[texCoordIndex++] = (stack.toFloat() + 0.5f) / (numStacks - 1)
 
-                val x = cosPhi * sinTheta
-                val y = cosTheta
-                val z = sinPhi * sinTheta
+                if (stack < numStacks - 1 && slice < numSlices - 1) {
+                    val i0 = (stack * numSlices + slice).toShort()
+                    val i1 = (i0 + 1).toShort()
+                    val i2 = ((stack + 1) * numSlices + slice).toShort()
+                    val i3 = (i2 + 1).toShort()
 
-                gl.glNormal3f(x, y, z) // Установка нормалей
+                    indices[indexIndex++] = i0
+                    indices[indexIndex++] = i2
+                    indices[indexIndex++] = i1
 
-                // Используйте gl для вызова glVertex3f
-                gl.glVertex3f(x * radius, y * radius, z * radius) // Вершина сферы
+                    indices[indexIndex++] = i1
+                    indices[indexIndex++] = i2
+                    indices[indexIndex++] = i3
+                }
             }
         }
 
+        val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        vertexBuffer.put(vertices).position(0)
 
-}
+        val texCoordBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        texCoordBuffer.put(texCoords).position(0)
 
-    override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
-        GLES10.glViewport(0, 0, width, height)
-        GLES10.glMatrixMode(GL10.GL_PROJECTION)
-        GLES10.glLoadIdentity()
-        GLES10.glFrustumf(-1f, 1f, -1f, 1f, 1f, 10f)
-        GLES10.glMatrixMode(GL10.GL_MODELVIEW)
+        val indexBuffer = ByteBuffer.allocateDirect(indices.size * 2).order(ByteOrder.nativeOrder()).asShortBuffer()
+        indexBuffer.put(indices).position(0)
+
+        gl.glEnableClientState(GL10.GL_VERTEX_ARRAY)
+        gl.glEnableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
+
+        gl.glVertexPointer(3, GL10.GL_FLOAT, 0, vertexBuffer)
+        gl.glTexCoordPointer(2, GL10.GL_FLOAT, 0, texCoordBuffer)
+
+        gl.glDrawElements(GL10.GL_TRIANGLES, indices.size, GL10.GL_UNSIGNED_SHORT, indexBuffer)
+
+        gl.glDisableClientState(GL10.GL_VERTEX_ARRAY)
+        gl.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
+    }
+
+    private fun loadTextures(gl: GL10) {
+        gl.glGenTextures(textures.size, textures, 0)
+
+        for (i in textures.indices) {
+            gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[i])
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat())
+
+            val bitmap = BitmapFactory.decodeResource(context.resources, planetTextures[i])
+            GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
+            bitmap.recycle()
+        }
     }
 }
