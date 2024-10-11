@@ -13,8 +13,9 @@ class Renderer(var context: Context) : GLSurfaceView.Renderer {
     private var mAngle = 0f
 
     init {
-        mSquare = Square(this.context)
         mCube = Cube()
+        mSquare = Square(this.context)
+
     }
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
