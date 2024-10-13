@@ -13,10 +13,10 @@ class Square(private val context: Context) {
     private var textureId: Int = 0
 
     private val vertices = floatArrayOf(
-        -3.0f, -3.0f, 0.0f,  // 0. left-bottom
-        3.0f, -3.0f, 0.0f,   // 1. right-bottom
-        -3.0f, 3.0f, 0.0f,   // 2. left-top
-        3.0f, 3.0f, 0.0f     // 3. right-top
+        -12.0f, -10.0f, -25.0f,  // 0. left-bottom
+        12.0f, -10.0f, -25.0f,   // 1. right-bottom
+        -12.0f, 35.0f, -5.0f,   // 2. left-top
+        12.0f, 35.0f, -5.0f     // 3. right-top
     )
 
     private val textureCoords = floatArrayOf(
@@ -47,21 +47,18 @@ class Square(private val context: Context) {
         gl.glGenTextures(1, textureHandle, 0)
 
         if (textureHandle[0] != 0) {
-            // Загрузка изображения в битмап с ресурса
             val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.stars)
             gl.glBindTexture(GL10.GL_TEXTURE_2D, textureHandle[0])
 
-            // Загружаем текстуру в OpenGL
             GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
 
-            // Настройка параметров текстуры
+
             gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_NEAREST.toFloat())
             gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat())
             gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE.toFloat())
             gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE.toFloat())
 
-            // Освобождаем ресурсы битмапа
-            bitmap.recycle()
+
         }
 
         return textureHandle[0]
@@ -72,7 +69,6 @@ class Square(private val context: Context) {
             textureId = loadTexture(gl)
         }
 
-        // Отключаем смешивание цветов
         gl.glDisable(GL10.GL_BLEND)
 
         gl.glEnable(GL10.GL_TEXTURE_2D)
@@ -86,9 +82,9 @@ class Square(private val context: Context) {
 
         gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP, 0, vertices.size / 3)
 
-        gl.glDisableClientState(GL10.GL_VERTEX_ARRAY)
-        gl.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
-        gl.glDisable(GL10.GL_TEXTURE_2D)
+        //gl.glDisableClientState(GL10.GL_VERTEX_ARRAY)
+        //gl.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
+        //gl.glDisable(GL10.GL_TEXTURE_2D)
     }
     fun delete(gl: GL10) {
         if (textureId != 0) {

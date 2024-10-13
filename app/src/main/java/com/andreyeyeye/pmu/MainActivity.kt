@@ -30,19 +30,19 @@ class MainActivity : ComponentActivity() {
 
         g = GLSurfaceView(this)
         g!!.setEGLConfigChooser(8, 8, 8, 8, 16, 1)
-        g!!.setRenderer(SolarSystemRenderer(this)) // Используем SolarSystemRenderer для отрисовки солнечной системы
+        g!!.setRenderer(SolarSystemRenderer(this))
         g!!.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY)
 
         setContent {
             PMUTheme {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Добавляем GLSurfaceView
+
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { g!! }
                     )
 
-                    // Добавляем Window
+
                     Window(viewModel)
                 }
             }

@@ -49,7 +49,7 @@ class Renderer(var context: Context) : GLSurfaceView.Renderer {
         gl.glTranslatef(0.0f, 0.0f, -4.0f)
         gl.glScalef(0.2f, 0.2f, 0.2f)
         gl.glRotatef(angleCube, 1.0f, -1.0f, 1.0f)
-        mCube.draw(gl)
+//        mCube.draw(gl)
         gl.glLoadIdentity()
         gl.glTranslatef(
             cos(mTransY.toDouble()).toFloat(), sin(mTransY.toDouble())

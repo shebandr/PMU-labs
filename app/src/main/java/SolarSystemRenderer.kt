@@ -13,7 +13,7 @@ import java.nio.ShortBuffer
 import com.andreyeyeye.pmu.R
 
 class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer {
-
+    private lateinit var square: Square
     private val textures = IntArray(5)
     private val planetTextures = intArrayOf(
         R.drawable.sun,   // Солнце
@@ -31,12 +31,13 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
     private var angle = 0.0f
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-        gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f) // Устанавливаем альфа-канал на 0.0f для прозрачности
         gl.glEnable(GL10.GL_TEXTURE_2D)
         gl.glEnable(GL10.GL_CULL_FACE)
         gl.glEnable(GL10.GL_DEPTH_TEST)
 
         loadTextures(gl)
+        square = Square(context)
     }
 
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
@@ -52,13 +53,13 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
         gl.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
         gl.glLoadIdentity()
 
-        // Устанавливаем камеру с низшего угла
-        GLU.gluLookAt(gl, 0.0f, -5.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f)
 
-        // Отрисовка Солнца
+        GLU.gluLookAt(gl, 0.0f, -15.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f)
+        square.draw(gl)
+
         drawPlanet(gl, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
 
-        // Отрисовка планет
+
         for (i in 1 until planetTextures.size) {
             if(i!=2){
                 val orbitAngle = angle * planetOrbitSpeeds[i]
@@ -69,7 +70,7 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
                 val rotationAngle = angle * planetRotationSpeeds[i]
                 drawPlanet(gl, i, x, y, 0.0f, orbitAngle, rotationAngle)
 
-                // Отрисовка Луны (только для Земли)
+
                 if (i == 1) {
                     val moonAngle = angle * 2.0f
                     val moonX = x + 0.8f * Math.cos(Math.toRadians(moonAngle.toDouble())).toFloat()
@@ -88,9 +89,9 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
     private fun drawPlanet(gl: GL10, planetIndex: Int, x: Float, y: Float, z: Float, orbitAngle: Float, rotationAngle: Float) {
         gl.glPushMatrix()
         gl.glTranslatef(x, y, z)
-        gl.glRotatef(rotationAngle, 0.0f, 0.0f, 1.0f) // Вращение вокруг оси Z
+        gl.glRotatef(rotationAngle, 0.0f, 0.0f, 1.0f)
         gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[planetIndex])
-        drawSphere(gl, planetRadii[planetIndex], 100, 100) // Увеличиваем количество сегментов и слоев
+        drawSphere(gl, planetRadii[planetIndex], 100, 100)
         gl.glPopMatrix()
     }
 
@@ -116,9 +117,9 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
                 vertices[vertexIndex++] = y.toFloat()
                 vertices[vertexIndex++] = z.toFloat()
 
-                // Улучшенные текстурные координаты
-                texCoords[texCoordIndex++] = (slice.toFloat() + 0.5f) / numSlices.toFloat()
-                texCoords[texCoordIndex++] = (stack.toFloat() + 0.5f) / (numStacks - 1)
+
+                texCoords[texCoordIndex++] = slice.toFloat() / (numSlices - 1)
+                texCoords[texCoordIndex++] = stack.toFloat() / (numStacks - 1)
 
                 if (stack < numStacks - 1 && slice < numSlices - 1) {
                     val i0 = (stack * numSlices + slice).toShort()
@@ -157,6 +158,7 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
         gl.glDisableClientState(GL10.GL_VERTEX_ARRAY)
         gl.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
     }
+
 
     private fun loadTextures(gl: GL10) {
         gl.glGenTextures(textures.size, textures, 0)
