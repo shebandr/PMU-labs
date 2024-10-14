@@ -25,8 +25,8 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
 
     private val planetRadii = floatArrayOf(1.0f, 0.5f, 0.2f, 0.4f, 0.8f)
     private val planetOrbitRadii = floatArrayOf(0.0f, 2.0f, 2.5f, 4.0f, 6.0f)
-    private val planetOrbitSpeeds = floatArrayOf(0.0f, 1.0f, 1.2f, 0.8f, 0.6f)
-    private val planetRotationSpeeds = floatArrayOf(0.0f, 2.0f, 3.0f, 1.5f, 1.0f)
+    private val planetOrbitSpeeds = floatArrayOf(1.0f, 1.0f, 1.2f, 3.0f, 0.9f)
+    private val planetRotationSpeeds = floatArrayOf(1.0f, 2.0f, 3.0f, 1.5f, 1.0f)
 
     private var angle = 0.0f
 
@@ -57,10 +57,10 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
         GLU.gluLookAt(gl, 0.0f, -15.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f)
         square.draw(gl)
 
-        drawPlanet(gl, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
+        //drawPlanet(gl, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
 
 
-        for (i in 1 until planetTextures.size) {
+        for (i in 0 until planetTextures.size) {
             if(i!=2){
                 val orbitAngle = angle * planetOrbitSpeeds[i]
                 val orbitRadius = planetOrbitRadii[i]
