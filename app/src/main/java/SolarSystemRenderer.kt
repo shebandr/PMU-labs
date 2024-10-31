@@ -37,11 +37,11 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
     private lateinit var cube: Cube
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-        gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f) // Устанавливаем альфа-канал на 0.0f для прозрачности
+        gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
         gl.glEnable(GL10.GL_TEXTURE_2D)
         gl.glEnable(GL10.GL_CULL_FACE)
         gl.glEnable(GL10.GL_DEPTH_TEST)
-        gl.glEnable(GL10.GL_BLEND) // Включаем смешивание для полупрозрачности
+        gl.glEnable(GL10.GL_BLEND)
         gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA)
 
         loadTextures(gl)
@@ -86,7 +86,7 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
                     if (selectedPlanetIndex == 2) { // Moon
                         gl.glPushMatrix()
                         gl.glTranslatef(moonX, moonY, moonZ)
-                        gl.glRotatef(45.0f, 0.0f, 1.0f, 0.0f) // Поворот куба по горизонтали
+                        gl.glRotatef(45.0f, 0.5f, 0.5f, 0.0f)
                         gl.glScalef(planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f)
                         gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f) // Partially transparent cube
                         cube.draw(gl)
@@ -104,7 +104,7 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
 
             gl.glPushMatrix()
             gl.glTranslatef(selectedX, selectedY, 0.0f)
-            gl.glRotatef(45.0f, 0.0f, 1.0f, 0.0f) // Поворот куба по горизонтали
+            gl.glRotatef(45.0f, 0.5f, 0.5f, 0.0f)
             gl.glScalef(planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f)
             gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f) // Partially transparent cube
             cube.draw(gl)

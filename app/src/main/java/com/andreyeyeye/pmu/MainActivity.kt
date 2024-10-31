@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.andreyeyeye.pmu.ui.theme.PMUTheme
 import Window
+
 class MainActivity : ComponentActivity() {
     private val viewModel: NewsViewModel by viewModels()
     private var glSurfaceView: GLSurfaceView? = null
@@ -66,6 +67,9 @@ class MainActivity : ComponentActivity() {
                             Text("Right")
                         }
                     }
+
+                    // Добавляем Window на самый верхний слой
+                    Window(viewModel)
                 }
             }
         }
