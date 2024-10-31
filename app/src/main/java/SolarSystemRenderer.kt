@@ -83,10 +83,10 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
 
                     drawPlanet(gl, 2, moonX, moonY, moonZ, moonAngle, moonAngle)
 
-                    if (selectedPlanetIndex == 2) { // Moon
+                    if (selectedPlanetIndex == 2) {
                         gl.glPushMatrix()
                         gl.glTranslatef(moonX, moonY, moonZ)
-                        gl.glRotatef(45.0f, 0.5f, 0.5f, 0.0f)
+                        gl.glRotatef(45.0f, 0.5f, 0.5f, 1.0f)
                         gl.glScalef(planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f)
                         gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f) // Partially transparent cube
                         cube.draw(gl)
@@ -209,7 +209,7 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
     }
 
     fun showInfo() {
-        // Implement the logic to show information about the selected planet
+
     }
 }
 
@@ -223,23 +223,6 @@ class SolarSystemView(context: Context) : GLSurfaceView(context) {
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
 
-        setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    val x = event.x
-                    val y = event.y
 
-                    // Check if buttons are pressed
-                    if (x < width / 3) {
-                        renderer.moveLeft()
-                    } else if (x > width * 2 / 3) {
-                        renderer.moveRight()
-                    } else {
-                        renderer.showInfo()
-                    }
-                }
-            }
-            true
-        }
     }
 }
