@@ -5,6 +5,7 @@ import javax.microedition.khronos.opengles.GL10
 
 class Cube {
     private val vertexBuffer: FloatBuffer
+    private val edgeBuffer: FloatBuffer
     private val numFaces = 6
     private val colors = arrayOf(
         floatArrayOf(1.0f, 0.5f, 0.0f, 1.0f),
@@ -14,7 +15,7 @@ class Cube {
         floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f),
         floatArrayOf(1.0f, 1.0f, 0.0f, 1.0f)
     )
-    private val vertices = floatArrayOf( // Vertices of the 6 faces
+    private val vertices = floatArrayOf(
         // FRONT
         -1.0f, -1.0f, 1.0f,  // 0. left-bottom-front
         1.0f, -1.0f, 1.0f,  // 1. right-bottom-front
@@ -47,12 +48,59 @@ class Cube {
         1.0f, -1.0f, 1.0f // 1. right-bottom-front
     )
 
+    private val edges = floatArrayOf(
+        // FRONT
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+        // BACK
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        // LEFT
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        // RIGHT
+        1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        // TOP
+        -1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+        // BOTTOM
+        -1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f
+    )
+
     init {
         val byteBuf = ByteBuffer.allocateDirect(vertices.size * 4)
         byteBuf.order(ByteOrder.nativeOrder())
         vertexBuffer = byteBuf.asFloatBuffer()
         vertexBuffer.put(vertices)
         vertexBuffer.position(0)
+
+        val edgeByteBuf = ByteBuffer.allocateDirect(edges.size * 4)
+        edgeByteBuf.order(ByteOrder.nativeOrder())
+        edgeBuffer = edgeByteBuf.asFloatBuffer()
+        edgeBuffer.put(edges)
+        edgeBuffer.position(0)
     }
 
     fun draw(gl: GL10) {
@@ -61,13 +109,24 @@ class Cube {
         gl.glCullFace(GL10.GL_BACK)
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY)
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, vertexBuffer)
+
+        // Draw faces with transparency
+        gl.glEnable(GL10.GL_BLEND)
+        gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA)
         for (face in 0 until numFaces) {
             gl.glColor4f(
                 colors[face][0],
-                colors[face][1], colors[face][2], colors[face][3]
+                colors[face][1], colors[face][2], 0.5f // Transparent
             )
             gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP, face * 4, 4)
         }
+        gl.glDisable(GL10.GL_BLEND)
+
+        // Draw edges
+        gl.glColor4f(1.0f, 1.0f, 1.0f, 1.0f) // Opaque
+        gl.glVertexPointer(3, GL10.GL_FLOAT, 0, edgeBuffer)
+        gl.glDrawArrays(GL10.GL_LINES, 0, edges.size / 3)
+
         gl.glDisableClientState(GL10.GL_VERTEX_ARRAY)
         gl.glDisable(GL10.GL_CULL_FACE)
     }

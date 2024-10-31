@@ -11,33 +11,42 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 import com.andreyeyeye.pmu.R
+import android.opengl.GLSurfaceView.Renderer
+import android.view.MotionEvent
+import android.view.View
 
-class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer {
+class SolarSystemRenderer(private val context: Context) : Renderer {
     private lateinit var square: Square
-    private val textures = IntArray(5)
+    private val textures = IntArray(6)
     private val planetTextures = intArrayOf(
-        R.drawable.sun,   // Солнце
-        R.drawable.earth, // Земля
-        R.drawable.moon,  // Луна
-        R.drawable.mars,  // Марс
-        R.drawable.jupiter // Юпитер
+        R.drawable.sun,
+        R.drawable.earth,
+        R.drawable.moon,
+        R.drawable.mars,
+        R.drawable.jupiter,
+        R.drawable.neptune
     )
 
-    private val planetRadii = floatArrayOf(1.0f, 0.5f, 0.2f, 0.4f, 0.8f)
-    private val planetOrbitRadii = floatArrayOf(0.0f, 2.0f, 2.5f, 4.0f, 6.0f)
-    private val planetOrbitSpeeds = floatArrayOf(1.0f, 1.0f, 1.2f, 3.0f, 0.9f)
-    private val planetRotationSpeeds = floatArrayOf(1.0f, 2.0f, 3.0f, 1.5f, 1.0f)
-
+    private val planetRadii = floatArrayOf(1.0f, 0.5f, 0.2f, 0.4f, 0.8f, 0.6f)
+    private val planetOrbitRadii = floatArrayOf(0.0f, 2.0f, 2.5f, 4.0f, 6.0f, 8.0f)
+    private val planetOrbitSpeeds = floatArrayOf(0.0f, 1.0f, 1.2f, 5.8f, 0.6f, 1.6f)
+    private val planetRotationSpeeds = floatArrayOf(2.1f, 2.0f, 3.0f, 1.5f, 1.0f, 2.0f)
     private var angle = 0.0f
+
+    private var selectedPlanetIndex = 0
+    private lateinit var cube: Cube
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
         gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f) // Устанавливаем альфа-канал на 0.0f для прозрачности
         gl.glEnable(GL10.GL_TEXTURE_2D)
         gl.glEnable(GL10.GL_CULL_FACE)
         gl.glEnable(GL10.GL_DEPTH_TEST)
+        gl.glEnable(GL10.GL_BLEND) // Включаем смешивание для полупрозрачности
+        gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA)
 
         loadTextures(gl)
         square = Square(context)
+        cube = Cube()
     }
 
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
@@ -53,12 +62,8 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
         gl.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
         gl.glLoadIdentity()
 
-
         GLU.gluLookAt(gl, 0.0f, -15.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f)
         square.draw(gl)
-
-        //drawPlanet(gl, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
-
 
         for (i in 0 until planetTextures.size) {
             if(i!=2){
@@ -70,17 +75,40 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
                 val rotationAngle = angle * planetRotationSpeeds[i]
                 drawPlanet(gl, i, x, y, 0.0f, orbitAngle, rotationAngle)
 
-
-                if (i == 1) {
+                if (i == 1) { // Earth
                     val moonAngle = angle * 2.0f
                     val moonX = x + 0.8f * Math.cos(Math.toRadians(moonAngle.toDouble())).toFloat()
                     val moonY = y + 0.8f * Math.sin(Math.toRadians(moonAngle.toDouble())).toFloat()
                     val moonZ = 0.5f * Math.sin(Math.toRadians(moonAngle.toDouble())).toFloat()
 
                     drawPlanet(gl, 2, moonX, moonY, moonZ, moonAngle, moonAngle)
+
+                    if (selectedPlanetIndex == 2) { // Moon
+                        gl.glPushMatrix()
+                        gl.glTranslatef(moonX, moonY, moonZ)
+                        gl.glRotatef(45.0f, 0.0f, 1.0f, 0.0f) // Поворот куба по горизонтали
+                        gl.glScalef(planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f)
+                        gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f) // Partially transparent cube
+                        cube.draw(gl)
+                        gl.glPopMatrix()
+                    }
                 }
             }
+        }
 
+        if (selectedPlanetIndex != 2) { // Not Moon
+            val selectedOrbitAngle = angle * planetOrbitSpeeds[selectedPlanetIndex]
+            val selectedOrbitRadius = planetOrbitRadii[selectedPlanetIndex]
+            val selectedX = selectedOrbitRadius * Math.cos(Math.toRadians(selectedOrbitAngle.toDouble())).toFloat()
+            val selectedY = selectedOrbitRadius * Math.sin(Math.toRadians(selectedOrbitAngle.toDouble())).toFloat()
+
+            gl.glPushMatrix()
+            gl.glTranslatef(selectedX, selectedY, 0.0f)
+            gl.glRotatef(45.0f, 0.0f, 1.0f, 0.0f) // Поворот куба по горизонтали
+            gl.glScalef(planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f)
+            gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f) // Partially transparent cube
+            cube.draw(gl)
+            gl.glPopMatrix()
         }
 
         angle += 1.0f
@@ -116,7 +144,6 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
                 vertices[vertexIndex++] = x.toFloat()
                 vertices[vertexIndex++] = y.toFloat()
                 vertices[vertexIndex++] = z.toFloat()
-
 
                 texCoords[texCoordIndex++] = slice.toFloat() / (numSlices - 1)
                 texCoords[texCoordIndex++] = stack.toFloat() / (numStacks - 1)
@@ -159,7 +186,6 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
         gl.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY)
     }
 
-
     private fun loadTextures(gl: GL10) {
         gl.glGenTextures(textures.size, textures, 0)
 
@@ -171,6 +197,49 @@ class SolarSystemRenderer(private val context: Context) : GLSurfaceView.Renderer
             val bitmap = BitmapFactory.decodeResource(context.resources, planetTextures[i])
             GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
             bitmap.recycle()
+        }
+    }
+
+    fun moveLeft() {
+        selectedPlanetIndex = (selectedPlanetIndex - 1 + planetTextures.size) % planetTextures.size
+    }
+
+    fun moveRight() {
+        selectedPlanetIndex = (selectedPlanetIndex + 1) % planetTextures.size
+    }
+
+    fun showInfo() {
+        // Implement the logic to show information about the selected planet
+    }
+}
+
+
+class SolarSystemView(context: Context) : GLSurfaceView(context) {
+    private val renderer: SolarSystemRenderer
+
+    init {
+        setEGLContextClientVersion(1)
+        renderer = SolarSystemRenderer(context)
+        setRenderer(renderer)
+        renderMode = RENDERMODE_CONTINUOUSLY
+
+        setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    val x = event.x
+                    val y = event.y
+
+                    // Check if buttons are pressed
+                    if (x < width / 3) {
+                        renderer.moveLeft()
+                    } else if (x > width * 2 / 3) {
+                        renderer.moveRight()
+                    } else {
+                        renderer.showInfo()
+                    }
+                }
+            }
+            true
         }
     }
 }
