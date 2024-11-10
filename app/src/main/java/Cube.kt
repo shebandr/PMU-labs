@@ -110,13 +110,13 @@ class Cube {
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY)
         gl.glVertexPointer(3, GL10.GL_FLOAT, 0, vertexBuffer)
 
-        // Draw faces with transparency
+
         gl.glEnable(GL10.GL_BLEND)
         gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA)
         for (face in 0 until numFaces) {
             gl.glColor4f(
                 colors[face][0],
-                colors[face][1], colors[face][2], 0.5f // Transparent
+                colors[face][1], colors[face][2], 0.5f
             )
             gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP, face * 4, 4)
         }

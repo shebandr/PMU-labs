@@ -14,6 +14,30 @@ import com.andreyeyeye.pmu.R
 import android.opengl.GLSurfaceView.Renderer
 import android.view.MotionEvent
 import android.view.View
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+
+
 
 class SolarSystemRenderer(private val context: Context) : Renderer {
     private lateinit var square: Square
@@ -26,11 +50,12 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         R.drawable.jupiter,
         R.drawable.neptune
     )
-
+    var showDialog: MutableState<Boolean> = mutableStateOf(false)
     private val planetRadii = floatArrayOf(1.0f, 0.5f, 0.2f, 0.4f, 0.8f, 0.6f)
     private val planetOrbitRadii = floatArrayOf(0.0f, 2.0f, 2.5f, 4.0f, 6.0f, 8.0f)
     private val planetOrbitSpeeds = floatArrayOf(0.0f, 1.0f, 1.2f, 5.8f, 0.6f, 1.6f)
     private val planetRotationSpeeds = floatArrayOf(2.1f, 2.0f, 3.0f, 1.5f, 1.0f, 2.0f)
+    private val planetInfoText = arrayOf("Солнце - главная звезда солнечной системы", "Земля - единственная планета с органической жизнью", "Луна - спутник Земли", "Марс - красная планета, названная в честь древнегреческого бога войны", "Юпитер - самый большой газовый гигант солнечной системы", "Нептун - самая дальняя признанная планета солнечной системы")
     private var angle = 0.0f
 
     private var selectedPlanetIndex = 0
@@ -66,7 +91,7 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         square.draw(gl)
 
         for (i in 0 until planetTextures.size) {
-            if(i!=2){
+            if (i != 2) {
                 val orbitAngle = angle * planetOrbitSpeeds[i]
                 val orbitRadius = planetOrbitRadii[i]
                 val x = orbitRadius * Math.cos(Math.toRadians(orbitAngle.toDouble())).toFloat()
@@ -87,7 +112,11 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
                         gl.glPushMatrix()
                         gl.glTranslatef(moonX, moonY, moonZ)
                         gl.glRotatef(45.0f, 0.5f, 0.5f, 1.0f)
-                        gl.glScalef(planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f)
+                        gl.glScalef(
+                            planetRadii[selectedPlanetIndex] * 1.2f,
+                            planetRadii[selectedPlanetIndex] * 1.2f,
+                            planetRadii[selectedPlanetIndex] * 1.2f
+                        )
                         gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f) // Partially transparent cube
                         cube.draw(gl)
                         gl.glPopMatrix()
@@ -99,13 +128,21 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         if (selectedPlanetIndex != 2) { // Not Moon
             val selectedOrbitAngle = angle * planetOrbitSpeeds[selectedPlanetIndex]
             val selectedOrbitRadius = planetOrbitRadii[selectedPlanetIndex]
-            val selectedX = selectedOrbitRadius * Math.cos(Math.toRadians(selectedOrbitAngle.toDouble())).toFloat()
-            val selectedY = selectedOrbitRadius * Math.sin(Math.toRadians(selectedOrbitAngle.toDouble())).toFloat()
+            val selectedX =
+                selectedOrbitRadius * Math.cos(Math.toRadians(selectedOrbitAngle.toDouble()))
+                    .toFloat()
+            val selectedY =
+                selectedOrbitRadius * Math.sin(Math.toRadians(selectedOrbitAngle.toDouble()))
+                    .toFloat()
 
             gl.glPushMatrix()
             gl.glTranslatef(selectedX, selectedY, 0.0f)
             gl.glRotatef(45.0f, 0.5f, 0.5f, 0.0f)
-            gl.glScalef(planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f, planetRadii[selectedPlanetIndex] * 1.2f)
+            gl.glScalef(
+                planetRadii[selectedPlanetIndex] * 1.2f,
+                planetRadii[selectedPlanetIndex] * 1.2f,
+                planetRadii[selectedPlanetIndex] * 1.2f
+            )
             gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f) // Partially transparent cube
             cube.draw(gl)
             gl.glPopMatrix()
@@ -114,7 +151,15 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         angle += 1.0f
     }
 
-    private fun drawPlanet(gl: GL10, planetIndex: Int, x: Float, y: Float, z: Float, orbitAngle: Float, rotationAngle: Float) {
+    private fun drawPlanet(
+        gl: GL10,
+        planetIndex: Int,
+        x: Float,
+        y: Float,
+        z: Float,
+        orbitAngle: Float,
+        rotationAngle: Float
+    ) {
         gl.glPushMatrix()
         gl.glTranslatef(x, y, z)
         gl.glRotatef(rotationAngle, 0.0f, 0.0f, 1.0f)
@@ -165,13 +210,18 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
             }
         }
 
-        val vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        val vertexBuffer =
+            ByteBuffer.allocateDirect(vertices.size * 4).order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
         vertexBuffer.put(vertices).position(0)
 
-        val texCoordBuffer = ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        val texCoordBuffer =
+            ByteBuffer.allocateDirect(texCoords.size * 4).order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
         texCoordBuffer.put(texCoords).position(0)
 
-        val indexBuffer = ByteBuffer.allocateDirect(indices.size * 2).order(ByteOrder.nativeOrder()).asShortBuffer()
+        val indexBuffer = ByteBuffer.allocateDirect(indices.size * 2).order(ByteOrder.nativeOrder())
+            .asShortBuffer()
         indexBuffer.put(indices).position(0)
 
         gl.glEnableClientState(GL10.GL_VERTEX_ARRAY)
@@ -191,8 +241,16 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
 
         for (i in textures.indices) {
             gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[i])
-            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR.toFloat())
-            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat())
+            gl.glTexParameterf(
+                GL10.GL_TEXTURE_2D,
+                GL10.GL_TEXTURE_MIN_FILTER,
+                GL10.GL_LINEAR.toFloat()
+            )
+            gl.glTexParameterf(
+                GL10.GL_TEXTURE_2D,
+                GL10.GL_TEXTURE_MAG_FILTER,
+                GL10.GL_LINEAR.toFloat()
+            )
 
             val bitmap = BitmapFactory.decodeResource(context.resources, planetTextures[i])
             GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
@@ -208,11 +266,41 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         selectedPlanetIndex = (selectedPlanetIndex + 1) % planetTextures.size
     }
 
-    fun showInfo() {
 
+    @Composable
+    fun showInfo() {
+        if (showDialog.value) {
+            Dialog(
+                onDismissRequest = { showDialog.value = false },
+                properties = DialogProperties(
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true
+                )
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+
+                    Column(
+
+                        verticalArrangement = Arrangement.Bottom,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(planetInfoText[selectedPlanetIndex])
+                        Button(
+                            onClick = { showDialog.value = false },
+                            modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
+
+                        ) {
+                            Text("Close")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
-
 
 class SolarSystemView(context: Context) : GLSurfaceView(context) {
     private val renderer: SolarSystemRenderer
