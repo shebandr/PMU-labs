@@ -18,12 +18,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.andreyeyeye.pmu.ui.theme.PMUTheme
 import Window
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 class MainActivity : ComponentActivity() {
     private val viewModel: NewsViewModel by viewModels()
     private var glSurfaceView: GLSurfaceView? = null
     private lateinit var renderer: SolarSystemRenderer
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,7 +74,9 @@ class MainActivity : ComponentActivity() {
 
                     Window(viewModel)
 
-                    renderer.showInfo()
+                    if (renderer.showDialog.value) {
+                        renderer.showInfo(LocalContext.current)
+                    }
                 }
             }
         }
@@ -86,3 +91,4 @@ fun DefaultPreview() {
         Window(viewModel)
     }
 }
+
