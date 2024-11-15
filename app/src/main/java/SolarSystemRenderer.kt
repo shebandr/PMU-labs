@@ -282,89 +282,74 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
     }
 
     fun moveLeft() {
-        selectedPlanetIndex = (selectedPlanetIndex - 1 + planetTextures.size) % planetTextures.size
+        sharedSelectedPlanetIndex.value = (sharedSelectedPlanetIndex.value - 1 + planetTextures.size) % planetTextures.size
+
+        Log.d("move",sharedSelectedPlanetIndex.value.toString());
     }
 
     fun moveRight() {
-        selectedPlanetIndex = (selectedPlanetIndex + 1) % planetTextures.size
+        sharedSelectedPlanetIndex.value = (sharedSelectedPlanetIndex.value + 1) % planetTextures.size
+        Log.d("move",sharedSelectedPlanetIndex.value.toString());
     }
 
     @Composable
     fun showInfo(context: Context) {
-        val planetInfo = planetInfoText[sharedSelectedPlanetIndex.value]
-        val planetRotationSpeed = planetRotationSpeeds[sharedSelectedPlanetIndex.value]
-        val planetRadius = planetRadii[sharedSelectedPlanetIndex.value] * 3
+        val planetIndex = sharedSelectedPlanetIndex.value
+        val planetRadius = planetRadii[planetIndex]*2
+        val planetInfo = planetInfoText[planetIndex]
+        val rotationAngle = remember { mutableStateOf(0.0f) }
+
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(16L) // Обновление каждые ~16 мс (60 FPS)
+                rotationAngle.value += 2.0f
+            }
+        }
 
         Dialog(
             onDismissRequest = { showDialog.value = false },
             properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = Color.Black.copy(alpha = 0.8f)
+            Box(
+                modifier = Modifier
+                    .size(900.dp)
+                    .padding(16.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Создаем GLSurfaceView для рендеринга планеты
-                    val glSurfaceView = remember {
-                        object : GLSurfaceView(context) {
-                            init {
-                                setEGLContextClientVersion(1)
-                                setRenderer(object : GLSurfaceView.Renderer {
-                                    private val textures = IntArray(6)
+                    AndroidView(
+                        modifier = Modifier
+                            .size(500.dp)
+                            .padding(16.dp),
+                        factory = {
+                            object : GLSurfaceView(it) {
+                                init {
+                                    setEGLContextClientVersion(1)
+                                    setRenderer(object : GLSurfaceView.Renderer {
+                                        override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
+                                            gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
+                                            gl.glEnable(GL10.GL_DEPTH_TEST)
+                                            gl.glEnable(GL10.GL_TEXTURE_2D)
 
-                                    override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-                                        gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
-                                        gl.glEnable(GL10.GL_TEXTURE_2D)
-                                        gl.glEnable(GL10.GL_LIGHTING)
-                                        gl.glEnable(GL10.GL_LIGHT0)
-                                        gl.glEnable(GL10.GL_COLOR_MATERIAL)
-                                        gl.glEnable(GL10.GL_NORMALIZE)
+                                            if (planetIndex != 0) {
+                                                gl.glEnable(GL10.GL_LIGHTING)
+                                                gl.glEnable(GL10.GL_LIGHT0)
 
-                                        val lightPosition = floatArrayOf(10.0f, 5.0f, 0.0f, 0.0f)
-                                        gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_POSITION, lightPosition, 0)
+                                                val lightPosition = floatArrayOf(15.0f, 3.0f, 3.0f, 1.0f)
+                                                val ambientLight = floatArrayOf(0.2f, 0.2f, 0.2f, 1.0f)
+                                                val diffuseLight = floatArrayOf(0.8f, 0.8f, 0.8f, 1.0f)
+                                                gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_POSITION, lightPosition, 0)
+                                                gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_AMBIENT, ambientLight, 0)
+                                                gl.glLightfv(GL10.GL_LIGHT0, GL10.GL_DIFFUSE, diffuseLight, 0)
+                                            }
 
-                                        // Загружаем текстуры заново
-                                        loadTextures(gl)
-                                    }
-
-                                    override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
-                                        gl.glViewport(0, 0, width, height)
-                                        gl.glMatrixMode(GL10.GL_PROJECTION)
-                                        gl.glLoadIdentity()
-                                        GLU.gluPerspective(gl, 45.0f, width.toFloat() / height.toFloat(), 0.1f, 100.0f)
-                                        gl.glMatrixMode(GL10.GL_MODELVIEW)
-                                        gl.glLoadIdentity()
-                                    }
-
-                                    override fun onDrawFrame(gl: GL10) {
-                                        gl.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
-                                        gl.glLoadIdentity()
-
-                                        // Вид сбоку с оси X
-                                        GLU.gluLookAt(gl, 10.0f, 0.0f, 0.0f,  // Позиция камеры (сбоку по оси X)
-                                            0.0f, 0.0f, 0.0f,       // Точка, на которую смотрим (центр сферы)
-                                            0.0f, 0.0f, 1.0f)       // Направление "вверх" (вверх по оси Y)
-
-                                        gl.glPushMatrix()
-                                        gl.glRotatef(sharedAngle.value, 0.0f, 0.0f, 1.0f)  // Вращение вокруг вертикальной оси
-                                        gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[sharedSelectedPlanetIndex.value])
-                                        drawSphere(gl, planetRadius, 100, 100)
-                                        gl.glPopMatrix()
-
-                                        sharedAngle.value += planetRotationSpeed / 60
-                                    }
-
-                                    private fun loadTextures(gl: GL10) {
-                                        gl.glGenTextures(textures.size, textures, 0)
-
-                                        for (i in textures.indices) {
-                                            gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[i])
+                                            // Загрузка текстуры для текущей планеты
+                                            gl.glEnable(GL10.GL_COLOR_MATERIAL)
+                                            gl.glGenTextures(1, textures, 0)
+                                            gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[0])
                                             gl.glTexParameterf(
                                                 GL10.GL_TEXTURE_2D,
                                                 GL10.GL_TEXTURE_MIN_FILTER,
@@ -375,37 +360,64 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
                                                 GL10.GL_TEXTURE_MAG_FILTER,
                                                 GL10.GL_LINEAR.toFloat()
                                             )
-
-                                            val bitmap = BitmapFactory.decodeResource(context.resources, planetTextures[i])
+                                            val bitmap = BitmapFactory.decodeResource(
+                                                context.resources,
+                                                planetTextures[planetIndex]
+                                            )
                                             GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
                                             bitmap.recycle()
                                         }
-                                    }
-                                })
-                                renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+
+                                        override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
+                                            gl.glViewport(0, 0, width, height)
+                                            gl.glMatrixMode(GL10.GL_PROJECTION)
+                                            gl.glLoadIdentity()
+                                            GLU.gluPerspective(
+                                                gl,
+                                                45.0f,
+                                                width.toFloat() / height.toFloat(),
+                                                0.1f,
+                                                30.0f
+                                            )
+                                            gl.glMatrixMode(GL10.GL_MODELVIEW)
+                                            gl.glLoadIdentity()
+                                        }
+
+                                        override fun onDrawFrame(gl: GL10) {
+                                            gl.glClear(GL10.GL_COLOR_BUFFER_BIT or GL10.GL_DEPTH_BUFFER_BIT)
+                                            gl.glLoadIdentity()
+                                            GLU.gluLookAt(
+                                                gl,
+                                                0.0f, 10.0f, 4.0f, // Камера: поднята выше и дальше
+                                                0.0f, 0.0f, 0.0f,  // Цель
+                                                0.0f, -1.0f, 0.0f   // Вектор вверх
+                                            )
+
+                                            if (planetIndex == 0) {
+                                                gl.glDisable(GL10.GL_LIGHTING)
+                                            } else {
+                                                gl.glEnable(GL10.GL_LIGHTING)
+                                            }
+
+                                            gl.glBindTexture(GL10.GL_TEXTURE_2D, textures[0])
+
+                                            // Вращение планеты
+                                            gl.glPushMatrix()
+                                            gl.glRotatef(rotationAngle.value, 0.0f, 0.0f, 1.0f)
+                                            drawSphere(gl, planetRadius, 50, 50)
+                                            gl.glPopMatrix()
+                                        }
+                                    })
+                                    renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+                                }
                             }
                         }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(300.dp)
-                            .padding(bottom = 16.dp)
-                    ) {
-                        AndroidView(
-                            factory = { glSurfaceView },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    // Отображение информации о планете
+                    )
                     Text(
                         text = planetInfo,
-                        color = Color.White,
-                        modifier = Modifier.padding(top = 16.dp)
+                        modifier = Modifier.padding(8.dp),
+                        color = Color.White
                     )
-
-                    // Кнопка закрытия окна
                     Button(
                         onClick = { showDialog.value = false },
                         modifier = Modifier.padding(top = 16.dp)
@@ -416,6 +428,9 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
             }
         }
     }
+
+
+
 }
 
 class SolarSystemView(context: Context) : GLSurfaceView(context) {
