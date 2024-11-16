@@ -39,8 +39,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 
 class SolarSystemRenderer(private val context: Context) : Renderer {
-    private lateinit var square: Square
-    private val textures = IntArray(6)
+    private lateinit var staticSquare: StaticSquare
+    private lateinit var movingSquare: MovingSquare
+    private val textures = IntArray(6) // Увеличиваем размер массива для текстур
     private val planetTextures = intArrayOf(
         R.drawable.sun,
         R.drawable.earth,
@@ -49,6 +50,8 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         R.drawable.jupiter,
         R.drawable.neptune
     )
+    private val holeTexture = R.drawable.hole
+    private val starsTexture = R.drawable.stars
     val sharedAngle = mutableStateOf(0.0f)
     val sharedSelectedPlanetIndex = mutableStateOf(0)
     var showDialog: MutableState<Boolean> = mutableStateOf(false)
@@ -78,7 +81,8 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA)
 
         loadTextures(gl)
-        square = Square(context)
+        staticSquare = StaticSquare(context, loadStarsTexture(gl))
+        movingSquare = MovingSquare(context, loadHoleTexture(gl))
         cube = Cube()
     }
 
@@ -96,7 +100,9 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         gl.glLoadIdentity()
 
         GLU.gluLookAt(gl, 0.0f, -15.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f)
-        square.draw(gl)
+        staticSquare.draw(gl)
+        movingSquare.updatePosition()
+        movingSquare.draw(gl)
 
         for (i in 0 until planetTextures.size) {
             if (i != 2) {
@@ -281,6 +287,48 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
         }
     }
 
+    private fun loadHoleTexture(gl: GL10): Int {
+        val textureHandle = IntArray(1)
+        gl.glGenTextures(1, textureHandle, 0)
+
+        if (textureHandle[0] != 0) {
+            val bitmap = BitmapFactory.decodeResource(context.resources, holeTexture)
+            gl.glBindTexture(GL10.GL_TEXTURE_2D, textureHandle[0])
+
+            GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
+
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE.toFloat())
+
+            bitmap.recycle()
+        }
+
+        return textureHandle[0]
+    }
+
+    private fun loadStarsTexture(gl: GL10): Int {
+        val textureHandle = IntArray(1)
+        gl.glGenTextures(1, textureHandle, 0)
+
+        if (textureHandle[0] != 0) {
+            val bitmap = BitmapFactory.decodeResource(context.resources, starsTexture)
+            gl.glBindTexture(GL10.GL_TEXTURE_2D, textureHandle[0])
+
+            GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0)
+
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE.toFloat())
+            gl.glTexParameterf(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE.toFloat())
+
+            bitmap.recycle()
+        }
+
+        return textureHandle[0]
+    }
+
     fun moveLeft() {
         sharedSelectedPlanetIndex.value = (sharedSelectedPlanetIndex.value - 1 + planetTextures.size) % planetTextures.size
 
@@ -428,9 +476,6 @@ class SolarSystemRenderer(private val context: Context) : Renderer {
             }
         }
     }
-
-
-
 }
 
 class SolarSystemView(context: Context) : GLSurfaceView(context) {
